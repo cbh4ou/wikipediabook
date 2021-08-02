@@ -44,11 +44,3 @@ class Person(models.Model):
    species = models.ForeignKey(Species, on_delete=models.DO_NOTHING)
 
 
-class Wikis(models.Model):
-    name = models.CharField(max_length=255)
-    url = models.CharField(max_length=255)
-    photo = models.ImageField(upload_to='chapter_covers')
-    
-class Front_Cover(models.Model):
-    name = models.CharField(max_length=255)
-    photo = models.ImageField(upload_to='front_covers')

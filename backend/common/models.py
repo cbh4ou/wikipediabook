@@ -11,3 +11,8 @@ class IndexedTimeStampedModel(models.Model):
     class Meta:
         abstract = True
 
+class Wikis(models.Model):
+    name = models.CharField(max_length=255)
+    url = models.CharField(max_length=255)
+    cover_photo = models.ImageField(upload_to='chapter_covers')
+    
