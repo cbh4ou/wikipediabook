@@ -8,7 +8,6 @@ from .forms import BookForm
 from django.views import generic, View
 from django.views.generic.edit import FormView
 from django.conf import settings
-from .services import Wiki
 from wikibook.tasks import send_ebook
 # Create your views here.
 
@@ -40,8 +39,9 @@ class BookView(View):
     def post(self, request, *args, **kwargs):
        form = BookForm(request.POST)
        if form.clean():
+          submitted = True
           #cd = form.cleaned_data
           title = request.POST['Title']
           self.handle_file_upload(request.FILES['upload_cover'], title, request.FILES['upload_urls'] )
           send_ebook.delay(title)
-          return FileResponse(open('media\cover_images\efwefwe.pdf', 'rb'))
+          return render(request, self.template_name, { 'submitted': submitted})
