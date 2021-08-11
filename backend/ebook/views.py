@@ -43,5 +43,5 @@ class BookView(View):
           #cd = form.cleaned_data
           title = request.POST['Title']
           self.handle_file_upload(request.FILES['upload_cover'], title, request.FILES['upload_urls'] )
-          task = send_ebook.AsyncResult(title)
+          send_ebook.delay(title)
           return FileResponse(open('media\cover_images\efwefwe.pdf', 'rb'))

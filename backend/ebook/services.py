@@ -27,6 +27,38 @@ class Wiki():
         list_string = ' '.join(string.split('_'))
         return list_string
     
+    def send_email_pdf_figs(self, path_to_pdf, title):
+        from socket import gethostname
+        #import email
+        from email.mime.application import MIMEApplication
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        import smtplib
+        import json
+
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        config = json.load(f)
+        server.login('connor@jkwenterprises.com', 'Primussucks72!')
+        # Craft message (obj)
+        msg = MIMEMultipart()
+        message = f'{message}\nSend from Hostname: {gethostname()}'
+        msg['Subject'] = "Ebook - " + self.title
+        msg['From'] = 'connor@jkwenterprises.com'
+        msg['To'] = ['832d9841.patriotpoweredpublishing.com@amer.teams.ms', 'cbh4ou@gmail.com']
+        # Insert the text to the msg going by e-mail
+        msg.attach(MIMEText(message, "plain"))
+        # Attach the pdf to the msg going by e-mail
+        with open(path_to_pdf, "rb") as f:
+            #attach = email.mime.application.MIMEApplication(f.read(),_subtype="pdf")
+            attach = MIMEApplication(f.read(),_subtype="pdf")
+        attach.add_header('Content-Disposition','attachment',filename=str(path_to_pdf))
+        msg.attach(attach)
+        # send msg
+        server.send_message(msg)
+        
+        return "Email Sent"
+    
     def build_book(self):
         # Split Urls into TOC Format
         chapters = [unquote(self.split_string(a)) for a in self.get_wiki_urls()]
@@ -109,35 +141,9 @@ class Wiki():
             cover_pdf.pages.extend(src.pages)
         cover_pdf.save("media/final_book/" + self.title + '.pdf')
         
-        send_email_pdf_figs("media/final_book/"+self.title+'.pdf' , self.title)
+        self.send_email_pdf_figs("media/final_book/"+self.title+'.pdf' , self.title)
+        
+        return True
 
 
-    def send_email_pdf_figs(self, path_to_pdf, title):
-        from socket import gethostname
-        #import email
-        from email.mime.application import MIMEApplication
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        import smtplib
-        import json
-
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        config = json.load(f)
-        server.login('connor@jkwenterprises.com', 'Primussucks72!')
-        # Craft message (obj)
-        msg = MIMEMultipart()
-        message = f'{message}\nSend from Hostname: {gethostname()}'
-        msg['Subject'] = "Ebook - " + self.title
-        msg['From'] = 'connor@jkwenterprises.com'
-        msg['To'] = '832d9841.patriotpoweredpublishing.com@amer.teams.ms'
-        # Insert the text to the msg going by e-mail
-        msg.attach(MIMEText(message, "plain"))
-        # Attach the pdf to the msg going by e-mail
-        with open(path_to_pdf, "rb") as f:
-            #attach = email.mime.application.MIMEApplication(f.read(),_subtype="pdf")
-            attach = MIMEApplication(f.read(),_subtype="pdf")
-        attach.add_header('Content-Disposition','attachment',filename=str(path_to_pdf))
-        msg.attach(attach)
-        # send msg
-        server.send_message(msg)
+    
