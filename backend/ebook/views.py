@@ -9,12 +9,14 @@ from django.views import generic, View
 from django.views.generic.edit import FormView
 from django.conf import settings
 from .services import Wiki
+from wikibook.tasks import send_ebook
 # Create your views here.
 
-cover_folder = settings.MEDIA_URL + "cover_images/"
+
 class BookView(View):
     template_name = 'common/index.html'
-
+    cover_folder = settings.MEDIA_URL + "cover_images/"
+    
     def get(self, request, *args, **kwargs):
         submitted = False
         form = BookForm()
@@ -34,12 +36,12 @@ class BookView(View):
       with open('media/Docs/wiki_urls.txt', 'wb+') as destination:
         for chunk in urls.chunks():
             destination.write(chunk)
+            
     def post(self, request, *args, **kwargs):
        form = BookForm(request.POST)
        if form.clean():
           #cd = form.cleaned_data
           title = request.POST['Title']
           self.handle_file_upload(request.FILES['upload_cover'], title, request.FILES['upload_urls'] )
-          book = Wiki(title)
-          book_path = book.build_book()
-          return FileResponse(open(book_path, 'rb'))
+          task = send_ebook.AsyncResult(title)
+          return FileResponse(open('media\cover_images\efwefwe.pdf', 'rb'))
