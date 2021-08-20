@@ -10,6 +10,7 @@ from docx.shared import Cm, Inches, Mm, Emu
 from urllib.parse import unquote
 import requests
 from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.conf import settings
 import json
 import urllib.request 
@@ -43,11 +44,15 @@ def send_ebook(title):
             import smtplib, ssl
             import json
 
-            subject = 'Thank you for registering to our site'
-            message = ' it  means a world to us '
-            email_from = settings.EMAIL_HOST_USER
+            subject = title + ' EBOOK HAS BEEN GENERATED'
+            message = 'God Speed'
             recipient_list = ['832d9841.patriotpoweredpublishing.com@amer.teams.ms',]
-            send_mail( subject, message, email_from, recipient_list )
+            email_from = settings.EMAIL_HOST_USER
+            email = EmailMessage(
+            subject, message, email_from, recipient_list)
+            email.attach_file(path_to_pdf)
+            email.send()
+            
             return "Email Sent"
         
         def build_book(self):
