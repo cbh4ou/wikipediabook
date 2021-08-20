@@ -163,7 +163,7 @@ def send_ebook(title):
                 time.sleep(1)
             
             
-            pdf_bytes = img2pdf.convert('media/cover_images/' + self.cover)
+            pdf_bytes = img2pdf.convert(('media/cover_images/' + self.cover).encode('utf-8'))
             pdf_file = open("media/cover_images/" + self.title + ".pdf", "wb")
             pdf_file.write(pdf_bytes)
             cover_pdf = Pdf.open('media/cover_images/' + self.title + ".pdf")    
