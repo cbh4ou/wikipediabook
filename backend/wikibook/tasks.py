@@ -15,6 +15,7 @@ from django.conf import settings
 import json
 import urllib.request 
 import time
+from PIL import Image
 
 @app.task(typing=False)
 def send_ebook(title):
@@ -162,11 +163,12 @@ def send_ebook(title):
                     
                 time.sleep(1)
             
-            
-            pdf_bytes = img2pdf.convert(('media/cover_images/' + self.cover).encode('utf-8'))
-            pdf_file = open("media/cover_images/" + self.title + ".pdf", "wb")
-            pdf_file.write(pdf_bytes)
-            cover_pdf = Pdf.open('media/cover_images/' + self.title + ".pdf")    
+            path_image = 'media/cover_images/' + self.cover
+            path_pdf = 'media/cover_images/' + self.title + ".pdf"
+            image1 = Image.open(path_image)
+            im1 = image1.convert('RGB')
+            im1.save(path_pdf)
+            cover_pdf = Pdf.open(path_pdf)    
             toc_pdf = Pdf.open("media/Docs/" + toc_filename)  
             
             del toc_pdf.pages[1:]
