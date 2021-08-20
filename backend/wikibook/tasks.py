@@ -46,7 +46,7 @@ def send_ebook(title):
 
             subject = title + ' EBOOK HAS BEEN GENERATED'
             message = 'God Speed'
-            recipient_list = ['832d9841.patriotpoweredpublishing.com@amer.teams.ms',]
+            recipient_list = ['bcce3c13.patriotpoweredpublishing.com@amer.teams.ms',]
             email_from = settings.EMAIL_HOST_USER
             email = EmailMessage(
             subject, message, email_from, recipient_list)
@@ -161,9 +161,11 @@ def send_ebook(title):
                     
                     
                 time.sleep(1)
-        
-            with open("media/cover_images/" + self.title + ".pdf","wb") as f:
-                f.write(img2pdf.convert('media/cover_images/' + self.cover))
+            
+            
+            pdf_bytes = img2pdf.convert('media/cover_images/' + self.cover)
+            pdf_file = open("media/cover_images/" + self.title + ".pdf", "wb")
+            pdf_file.write(pdf_bytes)
             cover_pdf = Pdf.open('media/cover_images/' + self.title + ".pdf")    
             toc_pdf = Pdf.open("media/Docs/" + toc_filename)  
             
