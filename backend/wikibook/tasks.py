@@ -11,6 +11,9 @@ from urllib.parse import unquote
 import requests
 from django.core.mail import send_mail
 from django.conf import settings
+import json
+import urllib.request 
+import time
 
 @app.task(typing=False)
 def send_ebook(title):
@@ -93,33 +96,71 @@ def send_ebook(title):
 
             for i in range(0,len(toc_data)):
                 table_contents.append({
-                    'Index': toc_data[i][0],
-                    'Value': toc_data[i][1]
+                    'title': toc_data[i][0],
+                    'page': toc_data[i][1]
                     })
 
 
             context = {
-                'title': self.title,
-                'day': datetime.datetime.now().strftime('%d'),
-                'month': datetime.datetime.now().strftime('%b'),
-                'year': datetime.datetime.now().strftime('%Y'),
-                'table_contents': table_contents,
+                'chapters': table_contents,
+                }
+            
+            template_id = '7629FCEA-EC18-4139-89C5-CAA9FC2A07D8'
+            toc_filename = ''
+            
+            
+            dicti = {
+                    "document": {
+                    "document_template_id": template_id,
+                    "payload": {},
+                    "status": "pending"
+                    }
+                }
+            dicti['document']['payload'].update(dict(context))
+            print(dicti['document'])
+
+
+
+            url = "https://api.pdfmonkey.io/api/v1/documents"
+
+            payload = json.dumps(dicti)
+            headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer BWZigvUTWdJogQzqiAb-'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            get_id = json.loads(response.text)
+
+            doc_id = get_id['document']['id']
+
+            while True:
+                url = "https://api.pdfmonkey.io/api/v1/documents/" + doc_id
+                print(url)
+
+                headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer BWZigvUTWdJogQzqiAb-'
                 }
 
-            #Render automated report
-            template.render(context)
-            template.save('media/Docs/poc.docx')
-            import pythoncom
-            import win32com.client as client
+                response = requests.request("GET", url, headers=headers)
 
-            pythoncom.CoInitialize()
-            convert("media/Docs/poc.docx")
-            
+                get_response = json.loads(response.text)
+                print(get_response['document']['status'])
+                if get_response['document']['status'] == 'success':
+                    url = get_response['document']['download_url']
+                    toc_filename = get_response['document']['filename']
+                    urllib.request.urlretrieve(url, "media/Docs/" + toc_filename)
+                    break
+                    
+                    
+                time.sleep(1)
         
             with open("media/cover_images/" + self.title + ".pdf","wb") as f:
                 f.write(img2pdf.convert('media/cover_images/' + self.cover))
             cover_pdf = Pdf.open('media/cover_images/' + self.title + ".pdf")    
-            toc_pdf = Pdf.open("media/Docs/poc.pdf")  
+            toc_pdf = Pdf.open("media/Docs/" + toc_filename)  
             
             del toc_pdf.pages[1:]
             
