@@ -29,19 +29,21 @@ class BookView(View):
 
     
     def handle_file_upload(self, cover, title, urls ):
-      with open('media/cover_images/' + title + '.jpg', 'wb+') as destination:
-        for chunk in cover.chunks():
-            destination.write(chunk)
-      with open('media/Docs/wiki_urls.txt', 'wb+') as destination:
-        for chunk in urls.chunks():
-            destination.write(chunk)
-            
+        with open('media/cover_images/' + title + '.jpg', 'wb+') as destination:
+            for chunk in cover.chunks():
+                destination.write(chunk)
+        with open('media/Docs/wiki_urls.txt', 'wb+') as destination:
+            for chunk in urls.chunks():
+                destination.write(chunk)
+        print('Image Uploaded')
+        return True
     def post(self, request, *args, **kwargs):
        form = BookForm(request.POST)
        if form.clean():
           submitted = True
           #cd = form.cleaned_data
           title = request.POST['Title']
-          self.handle_file_upload(request.FILES['upload_cover'], title, request.FILES['upload_urls'] )
-          send_ebook.delay(title)
+          start_task = self.handle_file_upload(request.FILES['upload_cover'], title, request.FILES['upload_urls'] )
+          if start_task == True:
+            send_ebook.delay(title)
           return render(request, self.template_name, { 'submitted': submitted})
