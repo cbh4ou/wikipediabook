@@ -16,6 +16,8 @@ import json
 import urllib.request 
 import time
 from PIL import Image
+import dropbox
+import io
 
 @app.task(typing=False)
 def send_ebook(title):
@@ -25,18 +27,35 @@ def send_ebook(title):
             self.wiki_urls = 'wiki_urls.txt'
             self.cover = title + ".jpg"
             self.title = title
-            
-        
+            self.dbx = dropbox.Dropbox(settings.DROPBOX_TOKEN)
+            self.textfile = title + ".txt"
         def get_wiki_urls(self):
-            with open("media/Docs/" + self.wiki_urls) as f:    content = [i.strip().rsplit('/', 1)[-1] for i in f.readlines()]
-            return content
-        
+            _, res = self.dbx.files_download("/Docs/" + self.textfile)
+
+            res.raise_for_status()
+            wiki_urls = []
+            
+            with io.BytesIO(res.content) as stream:
+                # assume bytes_io is a `BytesIO` object
+                byte_str = stream.read()
+
+                # Convert to a "unicode" object
+                text_obj = byte_str.decode('UTF-8')  # Or use the encoding you expect
+
+                # Use text_obj how you see fit!
+                lines = io.StringIO(text_obj) 
+                for x in lines:
+                    wiki_urls.append(x.rstrip())
+            return wiki_urls
         def split_string(self, string):
             # Split the string based on space delimiter
-            list_string = ' '.join(string.split('_'))
+            list_string = string.split('/')[-1]
+
+            list_string = ' '.join(list_string.split('_'))
+           
             return list_string
         
-        def send_email_pdf_figs(self, path_to_pdf, title):
+        def send_email_pdf_figs(self, ):
             from socket import gethostname
             #import email
             from email.mime.application import MIMEApplication
@@ -51,52 +70,70 @@ def send_ebook(title):
             email_from = settings.EMAIL_HOST_USER
             email = EmailMessage(
             subject, message, email_from, recipient_list)
-            email.attach_file(path_to_pdf)
+            metadata, edit = self.dbx.files_download(f"/final_pdfs/{self.title}.pdf")
+            with io.BytesIO(edit.content) as final_pdf:
+                email.attach( f"{self.title}.pdf", final_pdf.getvalue()  , mimetype="application/pdf")
             email.send()
-            
+            final_pdf.close()
             return "Email Sent"
         
         def build_book(self):
+            
             # Split Urls into TOC Format
-            chapters = [unquote(self.split_string(a)) for a in self.get_wiki_urls()]
-            imagepdf = Pdf.open('media/Images/name.pdf')
-            image1 = imagepdf.pages[0]
-            thumbnail = Page(imagepdf.pages[0])
-
-            directory = "media/chapter_covers/" 
+            chapters = [self.split_string(a) for a in self.get_wiki_urls()]
+            
+            
+            metadata, f = self.dbx.files_download('/Images/image.pdf')
+            with io.BytesIO(f.content) as img_file:
+                imagepdf = Pdf.open(img_file)
+                thumbnail = Page(imagepdf.pages[0])
+                
+            
+                
+            
+            directory = "/chapter_covers/" 
             request_url = 'https://en.wikipedia.org/api/rest_v1/page/pdf/'
             wiki_pdfs = []
-
-            for step in range(0,len(chapters)):
-                
+           
+            for step in range(0,len(chapters)):    
                 uri = chapters[step]
                 response = requests.get(request_url + uri)
                 filename = uri +'.pdf'
                 wiki_pdfs.append(filename)
-                
-                
-                with open(directory + chapters[step] + ".pdf", 'wb') as f:
-                    f.write(response.content)
+                with io.BytesIO(response.content) as open_pdf_file:
+                    self.dbx.files_upload(open_pdf_file.read(), path=f"/chapter_covers/{filename}",mode=dropbox.files.WriteMode.overwrite)   
+                    open_pdf_file.close()
                     
-            page_numbers=[3]  
-                
+            
             for pdf in wiki_pdfs:
-                tmp_pdf = Pdf.open('media/chapter_covers/'+pdf)
-                page_numbers.append((len(tmp_pdf.pages)  + page_numbers[len(page_numbers)-1]))
-                version = tmp_pdf.pdf_version
-                tmp_first_page = Page(tmp_pdf.pages[0])
-                tmp_first_page.add_overlay(thumbnail, Rectangle(0,0, 1000,300))
-                tmp_pdf.save('media/Docs/'+'edited-' + pdf, min_version=version)
                 
+                metadata, edit = self.dbx.files_download(f"/chapter_covers/{pdf}")
+                
+                with io.BytesIO(edit.content) as edit_pdf:
+                    
+                    page_numbers=[3]  
+                   
+                    tmp_pdf = Pdf.open(edit_pdf)
+                    
+                    page_numbers.append((len(tmp_pdf.pages)  + page_numbers[len(page_numbers)-1]))
+                    version = tmp_pdf.pdf_version
+                    print(thumbnail)
+                    tmp_first_page = Page(tmp_pdf.pages[0])
+                    tmp_first_page.add_overlay(thumbnail, Rectangle(0,0, 1000,300))
+                    in_mem = io.BytesIO()
+                    tmp_pdf.save(in_mem, min_version=version)
+                    
+                    
+                    print(in_mem)
+                    something = self.dbx.files_upload(in_mem.getvalue(), path=f"/chapter_covers/edited-{pdf}",mode=dropbox.files.WriteMode.overwrite)
+                    in_mem.close()
+                    edit_pdf.close()
+            img_file.close()
 
-
-            del page_numbers[-1]    
+            #del page_numbers[-1]    
             toc_data = list(zip(chapters,page_numbers))
-            
-            
-            # Template for TOC
-            template = DocxTemplate('media/Docs/doclayout.docx')
-
+      
+         
             #Generate List for TOC
             table_contents = []
 
@@ -111,7 +148,7 @@ def send_ebook(title):
                 'chapters': table_contents,
                 }
             
-            template_id = '7629FCEA-EC18-4139-89C5-CAA9FC2A07D8'
+            template_id = settings.TEMPLATE_ID
             toc_filename = ''
             
             
@@ -123,7 +160,7 @@ def send_ebook(title):
                     }
                 }
             dicti['document']['payload'].update(dict(context))
-            print(dicti['document'])
+            
 
 
 
@@ -132,7 +169,7 @@ def send_ebook(title):
             payload = json.dumps(dicti)
             headers = {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer BWZigvUTWdJogQzqiAb-'
+            'Authorization': settings.PDFMONKEY_KEY
             }
 
             response = requests.request("POST", url, headers=headers, data=payload)
@@ -140,10 +177,10 @@ def send_ebook(title):
             get_id = json.loads(response.text)
 
             doc_id = get_id['document']['id']
-
+           
             while True:
                 url = "https://api.pdfmonkey.io/api/v1/documents/" + doc_id
-                print(url)
+               
 
                 headers = {
                 'Content-Type': 'application/json',
@@ -153,33 +190,62 @@ def send_ebook(title):
                 response = requests.request("GET", url, headers=headers)
 
                 get_response = json.loads(response.text)
-                print(get_response['document']['status'])
+              
                 if get_response['document']['status'] == 'success':
                     url = get_response['document']['download_url']
                     toc_filename = get_response['document']['filename']
-                    urllib.request.urlretrieve(url, "media/Docs/" + toc_filename)
+                    response = urllib.request.urlopen(url)
+                    self.dbx.files_upload(response.read(), path=f"/Docs/{toc_filename}",mode=dropbox.files.WriteMode.overwrite)
+                    
                     break
                     
                     
                 time.sleep(1)
             
-            path_image = 'media/cover_images/' + self.cover
-            path_pdf = 'media/cover_images/' + self.title + ".pdf"
-            image1 = Image.open(path_image)
+            _, res = self.dbx.files_download("/Images/" + self.cover)
+            
+            path_pdf = '/chapter_covers/' + wiki_pdfs[0]
+            
+            metadata, f = self.dbx.files_download(path_pdf)
+            
+            
+            image1 = Image.open(io.BytesIO(res.content))
+            
             im1 = image1.convert('RGB')
-            im1.save(path_pdf)
-            cover_pdf = Pdf.open(path_pdf)    
-            toc_pdf = Pdf.open("media/Docs/" + toc_filename)  
+            mem = io.BytesIO()
+            im1.save(mem, format='PDF')
             
-            del toc_pdf.pages[1:]
+            #self.dbx.files_upload(mem.getvalue(), path=f"/Images/{self.title}.pdf",mode=dropbox.files.WriteMode.overwrite)   
+                   
+            cover_pdf = Pdf.open(mem)  
             
-            cover_pdf.pages.extend(toc_pdf.pages)
-            for pdf in wiki_pdfs:
-                src = Pdf.open("media/Docs/" + "edited-"+pdf)
-                cover_pdf.pages.extend(src.pages)
-            cover_pdf.save("media/final_book/" + self.title + '.pdf')
+            _, res = self.dbx.files_download(f"/Docs/{toc_filename}")
+            with io.BytesIO(res.content) as toc_file: 
+                final_mem = io.BytesIO()
+                toc_pdf = Pdf.open(toc_file)    
+                
+                del toc_pdf.pages[1:]
             
-            self.send_email_pdf_figs("media/final_book/"+self.title+'.pdf' , self.title)
+                cover_pdf.pages.extend(toc_pdf.pages)
+                
+                
+                for pdf in wiki_pdfs:
+                    
+                    metadata, epdf = self.dbx.files_download("/chapter_covers/edited-" +pdf)
+                    
+                    with io.BytesIO(epdf.content) as edited_pdf:
+                        
+                        src = Pdf.open(edited_pdf)
+                        
+                        cover_pdf.pages.extend(src.pages)
+                        
+                        src.close()
+                        edited_pdf.close()
+                        
+                cover_pdf.save(final_mem)
+                cover_pdf.close()
+                self.dbx.files_upload(final_mem.getvalue(), path=f"/final_pdfs/{self.title}.pdf",mode=dropbox.files.WriteMode.overwrite)  
+                self.send_email_pdf_figs()
         
     book = Wiki(title)
     path = book.build_book()

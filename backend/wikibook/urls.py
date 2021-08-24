@@ -1,10 +1,10 @@
 from django.conf.urls import include
 from django.urls import path
 from django.contrib import admin
-
+from django.conf import settings
 import django_js_reverse.views
 from rest_framework.routers import DefaultRouter
-
+from django.conf.urls.static import static
 from common.routes import routes as common_routes
 
 router = DefaultRouter()
@@ -20,3 +20,5 @@ urlpatterns = [
     path('ebook/', include('ebook.urls')),
     path("api/", include(router.urls), name="api"),
 ]
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+print(settings.MEDIA_URL, settings.MEDIA_ROOT)

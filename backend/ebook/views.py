@@ -9,6 +9,7 @@ from django.views import generic, View
 from django.views.generic.edit import FormView
 from django.conf import settings
 from wikibook.tasks import send_ebook
+import dropbox
 # Create your views here.
 
 
@@ -29,12 +30,10 @@ class BookView(View):
 
     
     def handle_file_upload(self, cover, title, urls ):
-        with open('media/cover_images/' + title + '.jpg', 'wb+') as destination:
-            for chunk in cover.chunks():
-                destination.write(chunk)
-        with open('media/Docs/wiki_urls.txt', 'wb+') as destination:
-            for chunk in urls.chunks():
-                destination.write(chunk)
+        dbx = dropbox.Dropbox(settings.DROPBOX_TOKEN)
+        dbx.files_upload(cover.file.read(), path=f"/Images/" + title + ".jpg", mode=dropbox.files.WriteMode.overwrite)
+        dbx.files_upload(urls.file.read(), path=f"/Docs/" + title + ".txt", mode=dropbox.files.WriteMode.overwrite)
+        
         print('Image Uploaded')
         return True
     def post(self, request, *args, **kwargs):

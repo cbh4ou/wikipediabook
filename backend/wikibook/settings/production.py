@@ -6,6 +6,9 @@ from .base import *  # noqa
 
 
 DEBUG = False
+DROPBOX_TOKEN = config("DROPBOX_TOKEN")
+PDFMONKEY_KEY = config("PDFMONKEY_KEY")
+TEMPLATE_ID = config("TEMPLATE_ID")
 
 SECRET_KEY = config("SECRET_KEY")
 

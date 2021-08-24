@@ -18,7 +18,10 @@ DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 AUTH_PASSWORD_VALIDATORS = []  # allow easy passwords only on local
-
+# DROPBOX ACCESS TOKEN
+DROPBOX_TOKEN = 'bbo9qxnGdyUAAAAAAAAAAeBM5y4Jm7JdQBUVN-SIbz-jJ_X8BSKbPN5CkTA_j8oe'
+PDFMONKEY_KEY = 'Bearer BWZigvUTWdJogQzqiAb-'
+TEMPLATE_ID = '7629FCEA-EC18-4139-89C5-CAA9FC2A07D8'
 # Celery
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
