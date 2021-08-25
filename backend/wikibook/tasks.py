@@ -83,15 +83,12 @@ def send_ebook(title):
             chapters = [self.split_string(a) for a in self.get_wiki_urls()]
             
             
-            metadata, f = self.dbx.files_download('/Images/image.pdf')
-            with io.BytesIO(f.content) as img_file:
-                imagepdf = Pdf.open(img_file)
-                thumbnail = Page(imagepdf.pages[0])
+            
                 
             
                 
             
-            directory = "/chapter_covers/" 
+            
             request_url = 'https://en.wikipedia.org/api/rest_v1/page/pdf/'
             wiki_pdfs = []
            
@@ -104,7 +101,7 @@ def send_ebook(title):
                     self.dbx.files_upload(open_pdf_file.read(), path=f"/chapter_covers/{filename}",mode=dropbox.files.WriteMode.overwrite)   
                     open_pdf_file.close()
                     
-            
+            time.sleep(2)
             for pdf in wiki_pdfs:
                 
                 metadata, edit = self.dbx.files_download(f"/chapter_covers/{pdf}")
@@ -114,21 +111,23 @@ def send_ebook(title):
                     page_numbers=[3]  
                    
                     tmp_pdf = Pdf.open(edit_pdf)
+                    metadata, f = self.dbx.files_download('/Images/image.pdf')
+                    with io.BytesIO(f.content) as img_file:
+                        imagepdf = Pdf.open(img_file)
+                        thumbnail = Page(imagepdf.pages[0])
+                        page_numbers.append((len(tmp_pdf.pages)  + page_numbers[len(page_numbers)-1]))
+                        version = tmp_pdf.pdf_version
+                        print(thumbnail)
+                        tmp_first_page = Page(tmp_pdf.pages[0])
+                        tmp_first_page.add_overlay(thumbnail, Rectangle(0, 0, 1000, 320))
+                        in_mem = io.BytesIO()
+                        tmp_pdf.save(in_mem, min_version=version)
                     
-                    page_numbers.append((len(tmp_pdf.pages)  + page_numbers[len(page_numbers)-1]))
-                    version = tmp_pdf.pdf_version
-                    print(thumbnail)
-                    tmp_first_page = Page(tmp_pdf.pages[0])
-                    tmp_first_page.add_overlay(thumbnail, Rectangle(0,0, 1000,300))
-                    in_mem = io.BytesIO()
-                    tmp_pdf.save(in_mem, min_version=version)
-                    
-                    
-                    print(in_mem)
                     something = self.dbx.files_upload(in_mem.getvalue(), path=f"/chapter_covers/edited-{pdf}",mode=dropbox.files.WriteMode.overwrite)
                     in_mem.close()
+                    img_file.close()
                     edit_pdf.close()
-            img_file.close()
+            
 
             #del page_numbers[-1]    
             toc_data = list(zip(chapters,page_numbers))
@@ -184,7 +183,7 @@ def send_ebook(title):
 
                 headers = {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer BWZigvUTWdJogQzqiAb-'
+                'Authorization': settings.PDFMONKEY_KEY
                 }
 
                 response = requests.request("GET", url, headers=headers)
@@ -214,9 +213,7 @@ def send_ebook(title):
             im1 = image1.convert('RGB')
             mem = io.BytesIO()
             im1.save(mem, format='PDF')
-            
-            #self.dbx.files_upload(mem.getvalue(), path=f"/Images/{self.title}.pdf",mode=dropbox.files.WriteMode.overwrite)   
-                   
+              
             cover_pdf = Pdf.open(mem)  
             
             _, res = self.dbx.files_download(f"/Docs/{toc_filename}")
