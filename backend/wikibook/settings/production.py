@@ -26,8 +26,8 @@ SERVER_EMAIL = "connor@jkwenterprises.com"
 
 
 EMAIL_HOST = 'smtp.gmail.com' #"smtp.sendgrid.net"
-EMAIL_HOST_USER = "connor@jkwenterprises.com" #config("SENDGRID_USERNAME")
-EMAIL_HOST_PASSWORD = 'Primussucks72!' #config("SENDGRID_PASSWORD")
+EMAIL_HOST_USER = config("JKW_EMAIL") #config("SENDGRID_USERNAME")
+EMAIL_HOST_PASSWORD = config("JKW_EMAIL_PASSWORD") #config("SENDGRID_PASSWORD")
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
